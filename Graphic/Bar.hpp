@@ -5,6 +5,7 @@ class Bar {
 	
 	public:
 		const int numBar = 20; // number of bars
+		float scaleBar; // value to scale the bars
 		// float barScale[];
 
 		GLfloat barVertices[8] = {

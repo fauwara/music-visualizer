@@ -4,16 +4,21 @@
 #include <vector>
 #include <fftw3.h>
 #include <GL/glut.h>
+#include <SFML/System.hpp>
 
 #include "Audio.hpp"
 #include "Graphic/Bar.hpp"
-// #include "fft.hpp"
-
 
 
 // const char *audioFilePath = "Audio/freq-test.wav";
 
 
+// clock
+sf::Clock clock_;
+sf::Time timeElapsed = sf::milliseconds(0);
+sf::Time fps_delay = sf::milliseconds(33);
+sf::Time song_delay = sf::milliseconds(500);
+// sf::Time delay;
 
 // initializing custom Audio class and loading song into buffer
 std::string audioFilePath = "Audio/aero.wav";
@@ -23,11 +28,6 @@ Audio audio;
 
 // inintializing some OpenGL primitives
 Bar bar;
-float scaleBar;
-
-
-// sf::Time delay = sf::milliseconds(27.5);
-sf::Time delay = sf::milliseconds(25);
 
 
 // initializing some fft variables
@@ -35,16 +35,15 @@ int real = 0;
 int imag = 1;
 
 const int freqBand = 30;
-const int chunkSize = 2874;
-// const int binBandwidth = 511;
+const int chunkSize = 2947;
 int chunksCovered = 0;
 
 int tempAmpFreq = 0;
-// int freqBandArray[freqBand];
 int powerSpectrum[chunkSize];
 int powerSpectrumSmoothed[freqBand];
 
 int maxFreq = 0;
+int overallMaxFreq = 0;
 int minFreq = 0;
 
 int avgFreq = 0;
@@ -59,85 +58,57 @@ float normalize(float num, float min, float max, float maximus){
 }
 
 
+
+
 // gets new fft values
 void updateFFTInput() {
 
 	maxFreq = 0;
-	// minFreq = 100000;
 	
-	for (int i = 0; i < chunkSize; i++) {
+	for (int i = 0; i < chunkSize && i+chunksCovered < audio.sampleCount; i++) {
 		input[i][real] = audio.samples[chunksCovered+i];
 		input[i][imag] = 0;
 	}
 
-
-	// fftw_plan plan = fftw_plan_dft_1d(binBandwidth, input, output, FFTW_FORWARD, FFTW_ESTIMATE);
 	fftw_plan plan = fftw_plan_dft_1d(chunkSize, input, output, FFTW_FORWARD, FFTW_ESTIMATE);
 	fftw_execute(plan);
 
 	fftw_destroy_plan(plan);
 	fftw_cleanup();
 
-	// avgFreq = 0;
-	// maxFreq = 0;
-	for (int i = 0; i < chunkSize; i++) {
 
+	for (int i = 0; i < chunkSize && i+chunksCovered < audio.sampleCount; i++)
 		powerSpectrum[i] = sqrt(pow(output[i+1][real], 2.0) + pow(output[i+1][imag], 2.0));
 
-	}
 
 	for (int i = 0; i<freqBand; i++){
 		powerSpectrumSmoothed[i] = 0;
-		for (int j = 0; j<chunkSize; j++){
+		for (int j = 0; j<chunkSize && j+chunksCovered < audio.sampleCount; j++){
 			powerSpectrumSmoothed[i] += powerSpectrum[j]; 
 		}
 		powerSpectrumSmoothed[i] = powerSpectrum[i]/chunkSize;
 
 		if (powerSpectrumSmoothed[i] > maxFreq){
 			maxFreq = powerSpectrumSmoothed[i];
-			// std::cout << "max: "<< maxFreq << std::endl;
 		}
-
-		// if (powerSpectrumSmoothed[i] < minFreq) {
-		// 	minFreq = powerSpectrumSmoothed[i];
-		// }
 	}
-
-	// std::cout << "	POWER " << std::endl;
-	// for (int i = 0; i < freqBand; i++) {
-
-	// 	std::cout << powerSpectrumSmoothed[i] << std::endl;
-
-	// }
-	
-	// std::cout << "min: "<< minFreq << std::endl;
-
-	// for (int i=0; i<freqBand; i++) {
-	// 	tempAmpFreq = 0;
-		// for (int j=0; j<chunkSize/(2*freqBand); j++){
-		// 	tempAmpFreq += output[(i*(chunkSize/freqBand))+j][real];
-		// 	// tempAmpFreq += abs(output[(i*(chunkSize/freqBand))+j][real]);
-		// }
-	// 	freqBandArray[i] = tempAmpFreq/(chunkSize/(2*freqBand));
-	// }
 
 	chunksCovered += chunkSize;
 
-	// if (freqBandArray[1] > max) {
-	// 	max = freqBandArray[1];
-	// }
+}
 
-	// std::cout << max << std::endl;
 
-	// std::cout << "START" << std::endl;
-	// for ( int i = 0; i<511; i++) {
-	// 	std::cout << abs(output[i][real]) << std::endl;
-	// }
-	// std::cout << "-----------START" << std::endl;
-	// for ( int i = 1; i<chunkSize/2; i++) {
-	// 	std::cout << powerSpectrum[i] << std::endl;
-	// }
-	
+// prolly not the most cleanest way to find max amp of freq in the audio file, but meh
+void findMaxFreq() {
+
+	for (int c = 0; c < (audio.sampleCount/chunkSize); c++) {
+		updateFFTInput();
+
+		if ( overallMaxFreq < maxFreq) {
+			overallMaxFreq = maxFreq;
+		}
+	}
+	chunksCovered = 0;
 
 }
 
@@ -145,25 +116,16 @@ void displayBars() {
 
 	for (int i = 1; i<freqBand; i++) {
 
-		// std::cout << i << ": " << powerSpectrumSmoothed[i] << std::endl;
-		// std::cout << i << ": " << minFreq << std::endl;
-		// std::cout << i << ": " << maxFreq << std::endl;
-		// std::cout << i << ": " << normalize(powerSpectrumSmoothed[i], minFreq, maxFreq, 2) << std::endl;
-		// audio.song.setPlayingOffset(time);
-		// glScalef(1.0, normalize(powerSpectrumSmoothed[i], minFreq, maxFreq, 2), 1.0);
-		scaleBar = normalize(powerSpectrumSmoothed[i], minFreq, maxFreq, 4.5);
-		glScalef(1.0, scaleBar, 1.0);
+		// glPushMatrix();
 		glTranslatef(0.06, 0.0, 0.0);
+		glPushMatrix();
+		// scaleBar = normalize(powerSpectrumSmoothed[i], minFreq, overallMaxFreq, 4.5);
+		bar.scaleBar = normalize(powerSpectrumSmoothed[i], minFreq, maxFreq, 4.5);
+		glScalef(1.0, bar.scaleBar, 1.0);
 		glDrawElements(GL_POLYGON, 8, GL_UNSIGNED_BYTE, bar.barIndices);
-		// if (scaleBar) {
-			glScalef(1.0, 1/scaleBar, 1.0);
-		// } else {
-		// 	glScalef(1.0, 1.0, 1.0);
-		// }
-		// glTranslatef(0.0, 0.0, 0.0);
-		// glScalef(1.0, normalize(freqBandArray[1], 0, 1000000, 3), 1.0);
-		// glTranslatef(0.15, 0.0, 0.0);
-		// glDrawElements(GL_POLYGON, 8, GL_UNSIGNED_BYTE, bar.barIndices);
+		glPopMatrix();
+		// glPopMatrix();
+
 	}
 
 }
@@ -195,8 +157,10 @@ void display() {
 
 void idlefunc() {
 
-	sf::sleep(delay);
 	updateFFTInput(); // gets new fft values
+	// fps_delay.asMilliseconds() - clock_.getElapsedTime().asMilliseconds();
+	sf::sleep(fps_delay - clock_.getElapsedTime());
+	clock_.restart();
 	// scaleBars();
 	glutPostRedisplay();
 	// std::cout << freqBandArray[0] << std::endl;
@@ -213,6 +177,11 @@ int main(int argc, char **argv) {
 
 	std::cout << "Sample Rate: " << audio.sampleRate << std::endl;
 	std::cout << "Sample Count: " << audio.sampleCount << std::endl;
+
+	findMaxFreq();
+	std::cout << "Max Freq: " << overallMaxFreq << std::endl;
+
+	// return 0;
 
 	// initial filling of fft input array
 	updateFFTInput();
@@ -237,7 +206,8 @@ int main(int argc, char **argv) {
 	glColorPointer(3, GL_FLOAT, 0, bar.barColors);
 	// glColor3f(1.0, 1.0, 1.0);
 	audio.song.setVolume(30);
-    audio.song.play();
+	audio.song.play();
+	sf::sleep(song_delay);
 	glutMainLoop();
 	// sf::SoundStream::stop()
 	
