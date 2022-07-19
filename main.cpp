@@ -8,6 +8,8 @@
 
 #include "Audio.hpp"
 #include "Graphic/Bar.hpp"
+#include "Graphic/Stars.hpp"
+#include "Graphic/Sky.hpp"
 
 
 // const char *audioFilePath = "Audio/freq-test.wav";
@@ -16,35 +18,45 @@
 // clock
 sf::Clock clock_;
 sf::Time timeElapsed = sf::milliseconds(0);
-sf::Time fps_delay = sf::milliseconds(33);
-sf::Time song_delay = sf::milliseconds(500);
+sf::Time fps_delay = sf::milliseconds(33.33);
+sf::Time song_delay = sf::milliseconds(950);
 // sf::Time delay;
 
 // initializing custom Audio class and loading song into buffer
-std::string audioFilePath = "Audio/aero.wav";
+// std::string audioFilePath = "Audio/aero-trim.wav";
+// std::string audioFilePath = "Audio/aero.wav";
+std::string audioFilePath = "Audio/eden-xo.wav";
 // std::string audioFilePath = "Audio/freq-test.wav";
 Audio audio;
 
 
 // inintializing some OpenGL primitives
 Bar bar;
+const int barCount = 30;
 
+Star star;
+
+Sky sky;
 
 // initializing some fft variables
 int real = 0;
 int imag = 1;
 
-const int freqBand = 30;
-const int chunkSize = 2947;
+
+// const int chunkSize = 2947; // aero
+const int chunkSize = 3200; // eden-xo
 int chunksCovered = 0;
+
 
 int tempAmpFreq = 0;
 int powerSpectrum[chunkSize];
-int powerSpectrumSmoothed[freqBand];
+// int powerSpectrumSmoothed = new int[count];
+int powerSpectrumSmoothed[barCount];
 
-int maxFreq = 0;
-int overallMaxFreq = 0;
-int minFreq = 0;
+float maxChunkFreq = 0;
+float minChunkFreq = 0;
+float maxFreq = 0;
+float minFreq = 0;
 
 int avgFreq = 0;
 
@@ -59,11 +71,10 @@ float normalize(float num, float min, float max, float maximus){
 
 
 
-
 // gets new fft values
 void updateFFTInput() {
 
-	maxFreq = 0;
+	maxChunkFreq = 0;
 	
 	for (int i = 0; i < chunkSize && i+chunksCovered < audio.sampleCount; i++) {
 		input[i][real] = audio.samples[chunksCovered+i];
@@ -81,15 +92,15 @@ void updateFFTInput() {
 		powerSpectrum[i] = sqrt(pow(output[i+1][real], 2.0) + pow(output[i+1][imag], 2.0));
 
 
-	for (int i = 0; i<freqBand; i++){
+	for (int i = 0; i<barCount; i++){
 		powerSpectrumSmoothed[i] = 0;
 		for (int j = 0; j<chunkSize && j+chunksCovered < audio.sampleCount; j++){
 			powerSpectrumSmoothed[i] += powerSpectrum[j]; 
 		}
 		powerSpectrumSmoothed[i] = powerSpectrum[i]/chunkSize;
 
-		if (powerSpectrumSmoothed[i] > maxFreq){
-			maxFreq = powerSpectrumSmoothed[i];
+		if (powerSpectrumSmoothed[i] > maxChunkFreq){
+			maxChunkFreq = powerSpectrumSmoothed[i];
 		}
 	}
 
@@ -104,8 +115,8 @@ void findMaxFreq() {
 	for (int c = 0; c < (audio.sampleCount/chunkSize); c++) {
 		updateFFTInput();
 
-		if ( overallMaxFreq < maxFreq) {
-			overallMaxFreq = maxFreq;
+		if ( maxFreq < maxChunkFreq) {
+			maxFreq = maxChunkFreq;
 		}
 	}
 	chunksCovered = 0;
@@ -114,26 +125,71 @@ void findMaxFreq() {
 
 void displayBars() {
 
-	for (int i = 1; i<freqBand; i++) {
+	glVertexPointer(2, GL_FLOAT, 0, bar.vertices);
+	glColorPointer(3, GL_FLOAT, 0, bar.colors);
+	
+	glPushMatrix();
+	for (int i = 1; i<barCount; i++) {
 
-		// glPushMatrix();
 		glTranslatef(0.06, 0.0, 0.0);
+	
 		glPushMatrix();
-		// scaleBar = normalize(powerSpectrumSmoothed[i], minFreq, overallMaxFreq, 4.5);
-		bar.scaleBar = normalize(powerSpectrumSmoothed[i], minFreq, maxFreq, 4.5);
-		glScalef(1.0, bar.scaleBar, 1.0);
-		glDrawElements(GL_POLYGON, 8, GL_UNSIGNED_BYTE, bar.barIndices);
+			// bar.scaleBar = normalize(powerSpectrumSmoothed[i], minFreq, maxFreq, 4.5);
+			bar.scaleBar = normalize(powerSpectrumSmoothed[i], minChunkFreq, maxChunkFreq, 4.5);
+			glScalef(1.0, bar.scaleBar, 1.0);
+			glDrawElements(GL_POLYGON, 4, GL_UNSIGNED_BYTE, bar.indices);
 		glPopMatrix();
-		// glPopMatrix();
 
 	}
+	glPopMatrix();
 
 }
 
-// void scaleBars() {
-// 	scale = freqBandArray[0];
+void displayStars() {
 
-// }
+	glVertexPointer(2, GL_FLOAT, 0, star.vertices);
+	
+	if ( maxChunkFreq > 0.35*maxFreq ) {
+		glColorPointer(4, GL_FLOAT, 0, star.colorsOn);
+		// std::cout << maxChunkFreq << " " << 0.35*maxFreq << std::endl;
+	}
+	else
+		glColorPointer(4, GL_FLOAT, 0, star.colorsOff);
+	
+	glPointSize(star.size);
+
+	// glTranslatef( star.displaceX, star.displaceY, 0.0 );
+	glPushMatrix();
+	for ( float y = -0.9; y <= 1; y += 0.1) {
+		for ( float x = -0.9; x <= 1; x += 0.1) {
+
+			glRotatef( 1000, 0.0, 0.0, 1.0);
+			glRotatef( star.displace, 0.0, 0.0, 1.0);
+			glPushMatrix();
+				glTranslatef( x, y, 0.0 );
+				glDrawElements(GL_POINTS, 1, GL_UNSIGNED_BYTE, star.indices);
+			glPopMatrix();
+			
+		}
+	}
+	glPopMatrix();
+
+}
+
+void rotateStars() {
+	star.displace += normalize( maxChunkFreq, 0, maxFreq, 0.1);
+	// star.displace += 0.01;
+	// star.displaceY += 0.01;
+}
+
+
+void drawSky() {
+	glVertexPointer(2, GL_FLOAT, 0, sky.vertices);
+	glColorPointer(3, GL_FLOAT, 0, sky.colors);
+	glDrawElements(GL_QUADS, 4, GL_UNSIGNED_BYTE, sky.indices);
+}
+
+
 
 void display() {
 	glClearColor( 1.0, 1.0, 1.0, 1.0 ); // Background Color
@@ -144,6 +200,12 @@ void display() {
 	glLoadIdentity();
 	// glScalef( normFloat, normFloat, normFloat );
 	// glScalef( j, j, j );
+
+
+
+	// if ( maxChunkFreq > (9/10)*maxFreq )
+	drawSky();
+	displayStars();
 
 	displayBars();
 	// std::cout << "HELLO" << std::endl;
@@ -158,6 +220,7 @@ void display() {
 void idlefunc() {
 
 	updateFFTInput(); // gets new fft values
+	rotateStars();
 	// fps_delay.asMilliseconds() - clock_.getElapsedTime().asMilliseconds();
 	sf::sleep(fps_delay - clock_.getElapsedTime());
 	clock_.restart();
@@ -177,9 +240,10 @@ int main(int argc, char **argv) {
 
 	std::cout << "Sample Rate: " << audio.sampleRate << std::endl;
 	std::cout << "Sample Count: " << audio.sampleCount << std::endl;
+	std::cout << "Audio Duration: " << audio.duration.asSeconds() << std::endl;
 
 	findMaxFreq();
-	std::cout << "Max Freq: " << overallMaxFreq << std::endl;
+	std::cout << "Max Freq: " << maxFreq << std::endl;
 
 	// return 0;
 
@@ -191,7 +255,7 @@ int main(int argc, char **argv) {
 	// initializing OpenGL
 	glutInit(&argc, argv);
 	// glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB );
-	// glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB );
 	glutInitWindowSize(500, 500);
 	glutCreateWindow("MUSIC VISUALIZER");
 	// glutReshapeFunc(myReshape);
@@ -201,13 +265,14 @@ int main(int argc, char **argv) {
 	// glEnable(GL_DEPTH_TEST);
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_VERTEX_ARRAY);
-	glVertexPointer(2, GL_FLOAT, 0, bar.barVertices);
+
 	// glColorPointer(4, GL_FLOAT, 0, colors);
-	glColorPointer(3, GL_FLOAT, 0, bar.barColors);
+
 	// glColor3f(1.0, 1.0, 1.0);
 	audio.song.setVolume(30);
 	audio.song.play();
 	sf::sleep(song_delay);
+
 	glutMainLoop();
 	// sf::SoundStream::stop()
 	

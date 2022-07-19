@@ -13,6 +13,8 @@ class Audio {
 		
 		const sf::Int16* samples;
 		sf::Uint64 sampleSize;
+
+		sf::Time duration;
 			
 		// load raw audio data into buffer
 		void loadBuffer( std::string audioFilePath) {
@@ -27,7 +29,8 @@ class Audio {
 
 			sampleRate = buffer.getSampleRate();
 			sampleCount = buffer.getSampleCount();
-
+			duration = buffer.getDuration();
+			
 		}
 
 };
