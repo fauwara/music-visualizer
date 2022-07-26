@@ -16,8 +16,8 @@ class Star {
 		};
 
 		// color format: CMY
-		GLfloat colorsOff[4] = {
-			0.0, 0.0, 0.0, 1.0
+		GLfloat colorsOff[3] = {
+			0.2314, 0.2824, 0.2039,
 		};
 
 		GLfloat colorsOn[4] = {

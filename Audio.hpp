@@ -10,6 +10,7 @@ class Audio {
 		sf::Sound song;
 		unsigned int sampleRate;
 		sf::Uint64 sampleCount;
+		int played = 0;
 		
 		const sf::Int16* samples;
 		sf::Uint64 sampleSize;
