@@ -6,7 +6,7 @@
 class Bar {
 	
 	public:
-		const int count = 60; // number of bars
+		const int count = 30; // number of bars
 		float scaleBar; // value to scale the bars
 		float barGap = 0.06;
 		float maxScale = 4.5;
@@ -30,7 +30,7 @@ class Bar {
 			// 0.5647, 0.9333, 0.5647, // light green
 			// 0.5647, 0.9333, 0.5647, // light green
 			
-			0.2314, 0.2824, 0.2039,
+			0.2314, 0.2824, 0.2039, //default
 			0.2314, 0.2824, 0.2039,
 			0.2314, 0.2824, 0.2039,
 			0.2314, 0.2824, 0.2039,

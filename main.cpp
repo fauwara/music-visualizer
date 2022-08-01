@@ -1,22 +1,16 @@
 #include <iostream>
 #include <stdlib.h>
 #include <cmath>
-#include <vector>
+// #include <vector>
 #include <string.h>
 #include <fftw3.h> // fast fourier transform
 #include <GL/glut.h> //
 #include <SFML/System.hpp>
-#include "stb/stb_image.h"
 
 #include "Audio.hpp"
 #include "Graphic/Bar.hpp"
 #include "Graphic/Stars.hpp"
 #include "Graphic/DescriptionPage.hpp"
-
-
-// const char *audioFilePath = "Audio/freq-test.wav";
-
-
 
 
 // clock
@@ -183,6 +177,7 @@ void displayStars() {
 
 	glVertexPointer(2, GL_FLOAT, 0, star.vertices);
 	
+	float incx, incy;
 	// if ( maxChunkFreq > 0.35*maxFreq ) 
 	// 	glColorPointer(3, GL_FLOAT, 0, star.colorsOn);
 		// std::cout << maxChunkFreq << " " << 0.35*maxFreq << std::endl;
@@ -195,11 +190,29 @@ void displayStars() {
 	glPushMatrix();
 	for ( float y = -0.9; y <= 1; y += 0.1) {
 		for ( float x = -0.9; x <= 1; x += 0.1) {
+	// for ( float y = -1.7; y <= 1.7; y += 0.1) {
+	// 	for ( float x = -1.7; x <=1.7; x += 0.1) {
 
 			glRotatef( 1000, 0.0, 0.0, 1.0);
 			glRotatef( star.displace, 0.0, 0.0, 1.0);
 			glPushMatrix();
 				glTranslatef( x, y, 0.0 );
+
+				// glTranslatef( 0.0, 0.0, star.displace );
+				// if ( x < 0 )
+				// 	incx = -1;
+				// else 
+				// 	incx = 1;
+
+				// if ( y < 0 )
+				// 	incy = -1;
+				// else
+				// 	incy = 1;
+
+				// if ( !(x-(star.displace*incx) == 0 || y-(star.displace*incy) == 0) )
+					// glTranslatef( x-(star.displace*incx), y-(star.displace*incy), 0.0 );
+					// glTranslatef( x-(star.displace*incx), y-(star.displace*incy), 0.0 );
+				
 				glDrawElements(GL_POINTS, 1, GL_UNSIGNED_BYTE, star.indices);
 			glPopMatrix();
 			
@@ -266,6 +279,7 @@ void displayMenuPage() {
 
 	glDrawElements(GL_POLYGON, 4, GL_UNSIGNED_BYTE, dp.indices);
 
+
 	glColor3f( 1.0, 1.0, 1.0 );
 	std::string menuPage[6] = {
 		"Choose the audio file:",
@@ -302,13 +316,13 @@ void displayMenuPage() {
 }
 
 void rotateStars() {
-	star.displace += normalize( maxChunkFreq, 0, maxFreq, 0.04);
+	star.displace += normalize( maxChunkFreq, 0, maxFreq, 0.05);
 	// star.displace += 0.01;
 	// star.displaceY += 0.01;
 }
 
 
-void initMusic( std::string audioFile) {
+void initMusic( std::string audioFile ) {
 				
 	audio.loadBuffer(audioFile);
 
@@ -353,11 +367,36 @@ void display() {
 
 		if (!audio.played) {
 
+			initMusic("Audio/tabla.wav");
+
+		}
+
+	} else if ( scene == 3 ) {
+			// audio.loadBuffer(audioFilePath);
+
+		displayStars();
+		displayBars();	
+
+		if (!audio.played) {
+
 			initMusic("Audio/ichika-nito.wav");
 
 		}
 
-	}
+	} else if ( scene == 4 ) {
+			// audio.loadBuffer(audioFilePath);
+		sf::Time song_delay = sf::milliseconds(800);
+
+		displayStars();
+		displayBars();	
+
+		if (!audio.played) {
+
+			initMusic("Audio/vocals.wav");
+
+		}
+
+	} else 
 
 
 
